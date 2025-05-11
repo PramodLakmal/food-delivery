@@ -1,0 +1,178 @@
+version: '3.8'
+
+services:
+  # MongoDB
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - food-delivery-network
+    restart: always
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"  # AMQP protocol port
+      - "15672:15672"  # Management UI port
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - food-delivery-network
+    restart: always
+
+  # API Gateway
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - JWT_SECRET=your_jwt_secret_key
+      - USER_SERVICE_URL=http://user-service:3001
+      - RESTAURANT_SERVICE_URL=http://restaurant-service:3003
+      - ORDER_SERVICE_URL=http://order-service:3004
+      - DELIVERY_SERVICE_URL=http://delivery-service:3005
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3006
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      - rabbitmq
+      - user-service
+      - restaurant-service
+      - order-service
+      - delivery-service
+      - notification-service
+    networks:
+      - food-delivery-network
+    restart: always
+
+  # User Service
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - MONGODB_URI=mongodb://mongodb:27017/food-ordering-users
+      - JWT_SECRET=your_jwt_secret_key
+      - RABBITMQ_URL=amqp://rabbitmq
+      - FRONTEND_URL=http://localhost
+    depends_on:
+      - mongodb
+      - rabbitmq
+    networks:
+      - food-delivery-network
+    restart: always
+
+  # Restaurant Service
+  restaurant-service:
+    build: ./restaurant-service
+    container_name: restaurant-service
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - MONGODB_URI=mongodb://mongodb:27017/restaurant-service
+      - JWT_SECRET=your_jwt_secret_key
+      - RABBITMQ_URL=amqp://rabbitmq
+      - USER_SERVICE_URL=http://user-service:3001
+    depends_on:
+      - mongodb
+      - rabbitmq
+    networks:
+      - food-delivery-network
+    restart: always
+
+  # Order Service
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+      - MONGODB_URI=mongodb://mongodb:27017/order-service
+      - JWT_SECRET=your_jwt_secret_key
+      - RABBITMQ_URL=amqp://rabbitmq
+      - USER_SERVICE_URL=http://user-service:3001/api
+      - RESTAURANT_SERVICE_URL=http://restaurant-service:3003/api
+    depends_on:
+      - mongodb
+      - rabbitmq
+      - user-service
+      - restaurant-service
+    networks:
+      - food-delivery-network
+    restart: always
+
+  # Delivery Service
+  delivery-service:
+    build: ./delivery-service
+    container_name: delivery-service
+    ports:
+      - "3005:3005"
+    environment:
+      - PORT=3005
+      - MONGO_URI=mongodb://mongodb:27017/delivery-service
+      - JWT_SECRET=your_jwt_secret_key
+      - RABBITMQ_URL=amqp://rabbitmq
+      - ORDER_SERVICE_URL=http://order-service:3004/api
+      - USER_SERVICE_URL=http://user-service:3001/api
+      - RESTAURANT_SERVICE_URL=http://restaurant-service:3003/api
+    depends_on:
+      - mongodb
+      - rabbitmq
+      - order-service
+    networks:
+      - food-delivery-network
+    restart: always
+
+  # Notification Service
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "3006:3006"
+    environment:
+      - PORT=3006
+      - MONGODB_URI=mongodb://mongodb:27017/food-ordering-notifications
+      - RABBITMQ_URL=amqp://rabbitmq
+      - EMAIL_HOST=smtp-relay.brevo.com
+      - EMAIL_PORT=587
+      - EMAIL_SECURE=false
+      - EMAIL_USER=8c117a002@smtp-brevo.com
+      - EMAIL_PASSWORD=CON8ZvydsWm45chp
+      - EMAIL_FROM=Food Ordering <clashofclans0716279187@gmail.com>
+    depends_on:
+      - mongodb
+      - rabbitmq
+    networks:
+      - food-delivery-network
+    restart: always
+
+  # Frontend
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - food-delivery-network
+    restart: always
+
+networks:
+  food-delivery-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  rabbitmq_data: 

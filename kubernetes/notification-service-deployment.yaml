@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - name: notification-service
+        image: final-notification-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3006
+        env:
+        - name: PORT
+          value: "3006"
+        - name: MONGODB_URI
+          value: "mongodb://mongodb:27017/food-ordering-notifications"
+        - name: RABBITMQ_URL
+          value: "amqp://rabbitmq"
+        - name: NODE_ENV
+          value: "development"
+        - name: EMAIL_HOST
+          value: "smtp-relay.brevo.com"
+        - name: EMAIL_PORT
+          value: "587"
+        - name: EMAIL_SECURE
+          value: "false"
+        - name: EMAIL_USER
+          value: "8c117a002@smtp-brevo.com"
+        - name: EMAIL_PASSWORD
+          value: "CON8ZvydsWm45chp"
+        - name: EMAIL_FROM
+          value: "Food Ordering <clashofclans0716279187@gmail.com>"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+spec:
+  ports:
+  - port: 3006
+    targetPort: 3006
+  selector:
+    app: notification-service 

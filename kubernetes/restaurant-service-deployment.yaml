@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: restaurant-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: restaurant-service
+  template:
+    metadata:
+      labels:
+        app: restaurant-service
+    spec:
+      containers:
+      - name: restaurant-service
+        image: final-restaurant-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3003
+        env:
+        - name: PORT
+          value: "3003"
+        - name: MONGODB_URI
+          value: "mongodb://mongodb:27017/restaurant-service"
+        - name: JWT_SECRET
+          value: "your_jwt_secret_key"
+        - name: RABBITMQ_URL
+          value: "amqp://rabbitmq"
+        - name: API_GATEWAY_URL
+          value: "http://api-gateway:3000"
+        - name: USER_SERVICE_URL
+          value: "http://user-service:3001"
+        - name: NOTIFICATION_SERVICE_URL
+          value: "http://notification-service:3006"
+        - name: GOOGLE_MAPS_API_KEY
+          value: "AIzaSyAiCPCA5qirrWS723VqS_RLBha4d_rTYkA"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: restaurant-service
+spec:
+  ports:
+  - port: 3003
+    targetPort: 3003
+  selector:
+    app: restaurant-service 

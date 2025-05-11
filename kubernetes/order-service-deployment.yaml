@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+      - name: order-service
+        image: final-order-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3004
+        env:
+        - name: PORT
+          value: "3004"
+        - name: MONGODB_URI
+          value: "mongodb://mongodb:27017/order-service"
+        - name: RABBITMQ_URL
+          value: "amqp://rabbitmq"
+        - name: JWT_SECRET
+          value: "your_jwt_secret_key"
+        - name: USER_SERVICE_URL
+          value: "http://user-service:3001/api"
+        - name: RESTAURANT_SERVICE_URL
+          value: "http://restaurant-service:3003/api"
+        - name: NODE_ENV
+          value: "development"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+spec:
+  ports:
+  - port: 3004
+    targetPort: 3004
+  selector:
+    app: order-service 
